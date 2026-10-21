@@ -67,12 +67,20 @@ function autoexec main()
 // reach a GobbleGum machine.
 function papgum_patch_watcher()
 {
+    logged = false;
+
     for ( ;; )
     {
         if ( isDefined( level.bgb ) && isDefined( level.bgb[ "zm_bgb_bullet_boost" ] ) )
         {
             level.bgb[ "zm_bgb_bullet_boost" ].activation_func = &papgum_activation;
             level.bgb[ "zm_bgb_bullet_boost" ].validation_func = &papgum_validation;
+
+            if ( !logged )
+            {
+                println( "PAPGUM: Bullet Boost patched (PaP / AAT re-roll active)" );
+                logged = true;
+            }
         }
 
         wait 0.25;
@@ -110,25 +118,70 @@ function papgum_validation()
 
 // Runs (on the player) when the gum is popped. One of Bullet
 // Boost's 2 activations is consumed by the bgb system itself.
+//
+// IMPORTANT: never touch the player's weapons in here. This
+// function is called (threaded, from bgb::run_activation_func)
+// WHILE the stock gum sequence is still running - the player is
+// mid chew-animation on the gumball weapon and
+// bgb_play_gumball_anim_end is concurrently swapping them back to
+// their real gun and restoring their move states. Doing the
+// TakeWeapon / weapon_give swap in the middle of that cancels
+// the animation and can leave the player permanently locked out
+// of sprint, melee and interact (playtest, 2026-10-21). So the
+// swap is deferred until the sequence has fully handed the
+// player back, then applied as its own clean sequence - the
+// same shape the Pack-a-Punch machine itself uses.
 function papgum_activation()
+{
+    self thread papgum_apply_when_ready();
+}
+
+function papgum_apply_when_ready()
 {
     self endon( "death" );
     self endon( "disconnect" );
+    self endon( "player_downed" );
 
-    self PlaySoundToPlayer( "zmb_bgb_bullet_boost", self );
-    self util::waittill_any_timeout( 1, "weapon_change_complete", "death", "disconnect" );
+    // Wait until the gum sequence is over: holding a real gun,
+    // not the gumball anim weapon, not mid-switch.
+    while ( isDefined( self ) )
+    {
+        w = self GetCurrentWeapon();
 
+        if ( isDefined( w ) && w != level.weaponNone && w != level.weaponBGBGrab && w != level.weaponBGBUse && !self IsSwitchingWeapons() )
+            break;
+
+        wait 0.1;
+    }
+
+    // Let anim_end's bookkeeping (drinking counter, move states)
+    // settle before touching the inventory.
+    wait 0.25;
+
+    if ( !isDefined( self ) || self IsSwitchingWeapons() )
+        return;
+
+    papgum_apply();
+}
+
+function papgum_apply()
+{
     weapon = self GetCurrentWeapon();
     weapon = self zm_weapons::switch_from_alt_weapon( weapon );
 
     if ( weapon == level.weaponNone )
         return;
 
+    self PlaySoundToPlayer( "zmb_bgb_bullet_boost", self );
+
     // ---- already Pack-a-Punched: re-roll the AAT ----
     if ( zm_weapons::is_weapon_upgraded( weapon ) )
     {
         if ( zm_weapons::weapon_supports_aat( weapon ) )
+        {
             self aat::acquire( weapon );
+            println( "PAPGUM: re-rolled AAT on " + weapon.name );
+        }
 
         return;
     }
@@ -151,4 +204,6 @@ function papgum_activation()
         self thread aat::acquire( upgrade_weapon );
     else
         self thread aat::remove( upgrade_weapon );
+
+    println( "PAPGUM: upgraded " + weapon.name + " -> " + upgrade_weapon.name );
 }

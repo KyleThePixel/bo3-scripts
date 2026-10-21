@@ -43,6 +43,13 @@ injector needed.
 - The patch re-applies itself automatically on every new map in the session.
 - The script's entry is an **autoexec** function — that's what boiii's
   custom_scripts loader runs (it never calls `main()`).
+- **The weapon swap is deferred** (v4, after the 2026-10-21 playtest):
+  `activation_func` runs mid gum-animation while stock is still swapping
+  the player back to their gun, and swapping weapons there cancelled the
+  animation and soft-locked sprint/melee/interact. The activation now
+  threads a worker that waits until the player is back on a real gun,
+  then applies the upgrade / re-roll as a clean standalone swap.
+  Console prints `PAPGUM:` lines when the patch lands and on each pop.
 
 ## Built from the stock scripts (verified, not guessed)
 

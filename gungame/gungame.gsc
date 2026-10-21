@@ -16,6 +16,7 @@
 //     your ladder weapon gets taken away within ~2 seconds.
 // ============================================================
 
+#using scripts\shared\callback_shared;
 #using scripts\zm\_zm;
 #using scripts\zm\_zm_spawner;
 #using scripts\zm\_zm_utility;
@@ -110,14 +111,23 @@ function gg_cond_label( cond )
 
 function gg_register_hooks()
 {
-    // stock systems may not be up yet when injected in the lobby
+    // stock systems may not be up yet when the script loads
     while ( !isDefined( level.zombie_death_event_callbacks ) )
         wait 0.5;
     zm_spawner::register_zombie_death_event_callback( &gungame::gg_on_zombie_death );
+    println( "GUNGAME: zombie death hook registered" );
 
     while ( !isDefined( level.player_damage_callbacks ) )
         wait 0.5;
     zm::register_player_damage_callback( &gungame::gg_on_player_damaged );
+    println( "GUNGAME: player damage hook registered" );
+
+    // Capture each zombie's last-hit damage info while it is
+    // guaranteed available. The death callback later prefers this
+    // stash over the corpse fields (self.damagemod etc.), which
+    // are not populated on every build.
+    callback::on_actor_damage( &gungame::gg_on_zombie_damage );
+    println( "GUNGAME: actor damage capture registered" );
 }
 
 function gg_watch_connections()
@@ -132,6 +142,15 @@ function gg_watch_connections()
 function gg_player_setup()
 {
     self endon( "disconnect" );
+
+    // Setup can be reached twice for the same player (already in
+    // level.players when the script loads AND via the "connected"
+    // watch). Without this guard the player gets duplicate
+    // watchers - two downed watchers means one down drops 2 tiers.
+    if ( isDefined( self.gg_setup_done ) && self.gg_setup_done )
+        return;
+    self.gg_setup_done = true;
+
     self.gg_tier         = 0;
     self.gg_progress     = 0;
     self.gg_clean        = true;
@@ -144,6 +163,35 @@ function gg_player_setup()
 }
 
 // ---------------- kill credit ----------------
+
+// Runs on EVERY actor damage event (callback::on_actor_damage).
+// Stashes the hit's damage info on the zombie itself, while the
+// engine params are guaranteed present. The death callback below
+// prefers this stash: reading self.damagemod / self.damageweapon
+// off the corpse works in stock BO3, but a co-op playtest on
+// boiii (2026-10-21) got stuck at 0/2 on a plain-kills tier,
+// which is what empty corpse fields would look like.
+// self = the actor taking damage.
+function gg_on_zombie_damage( params )
+{
+    if ( !isDefined( params ) )
+        return;
+
+    if ( !isDefined( params.eAttacker ) || !isPlayer( params.eAttacker ) )
+        return;
+
+    self.gg_last_attacker = params.eAttacker;
+
+    if ( isDefined( params.sMeansOfDeath ) )
+        self.gg_last_mod = params.sMeansOfDeath;
+
+    if ( isDefined( params.weapon ) )
+        self.gg_last_weapon = params.weapon;
+
+    if ( isDefined( params.sHitLoc ) )
+        self.gg_last_loc = params.sHitLoc;
+}
+
 // self = the dead zombie. attacker = killing player (may be undefined).
 
 function gg_on_zombie_death( attacker )
@@ -156,10 +204,21 @@ function gg_on_zombie_death( attacker )
         return;
 
     tier = level.gg_ladder[ attacker.gg_tier ];
+
+    // Prefer the hit-time stash; fall back to the corpse fields.
     mod = self.damagemod;
     wname = "";
     if ( isDefined( self.damageweapon ) )
         wname = self.damageweapon.name;
+    if ( isDefined( self.gg_last_mod ) )
+        mod = self.gg_last_mod;
+    if ( isDefined( self.gg_last_weapon ) )
+        wname = self.gg_last_weapon.name;
+
+    // Playtest diagnostic: one console line per player kill, so a
+    // stuck tier shows exactly which value failed to match.
+    smod = isDefined( mod ) ? mod : "undef";
+    println( "GG death: wname=" + wname + " mod=" + smod + " tier=" + tier.weapon + " cond=" + tier.cond );
 
     if ( tier.cond == "knife" )
     {
@@ -203,10 +262,24 @@ function gg_on_zombie_death( attacker )
 // zombie = the dead zombie entity
 function gg_is_headshot( zombie )
 {
-    if ( zombie.damagemod == "MOD_HEAD_SHOT" )
+    mod = zombie.damagemod;
+    if ( isDefined( zombie.gg_last_mod ) )
+        mod = zombie.gg_last_mod;
+
+    if ( mod == "MOD_HEAD_SHOT" )
         return true;
-    if ( isDefined( zombie.damageweapon ) && isDefined( zombie.damagelocation ) )
-        return zm_utility::is_headshot( zombie.damageweapon, zombie.damagelocation, zombie.damagemod );
+
+    weap = zombie.damageweapon;
+    if ( isDefined( zombie.gg_last_weapon ) )
+        weap = zombie.gg_last_weapon;
+
+    loc = zombie.damagelocation;
+    if ( isDefined( zombie.gg_last_loc ) )
+        loc = zombie.gg_last_loc;
+
+    if ( isDefined( weap ) && isDefined( loc ) )
+        return zm_utility::is_headshot( weap, loc, mod );
+
     return false;
 }
 
@@ -265,7 +338,8 @@ function gg_tier_down( player )
 {
     if ( player.gg_tier > 0 )
         player.gg_tier--;
-    player.gg_progress = 0;
+    // Design (PLAN.md / README): current-tier progress is KEPT
+    // when you drop a tier - do not zero gg_progress here.
     player.gg_clean = true;
     player.gg_frenzy_times = [];
     tier = level.gg_ladder[ player.gg_tier ];
