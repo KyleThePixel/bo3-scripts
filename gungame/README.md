@@ -78,15 +78,16 @@ It's one file. Open `gungame.gsc` and edit `gg_build_ladder()`:
 - Compile-checked with gsc-tool (T7) and round-trip decompiled — syntax is
   verified; in-game behavior still needs your playtest. If boiii's console
   shows a script error, send me the exact message and line number.
-- Kill credit (v3+): each zombie's last-hit damage info (weapon / means of
-  death / hit location) is captured in a stock actor-damage callback and
-  the death callback prefers that stash, falling back to the corpse
-  fields. Kills are matched by **base weapon name**, so if your ladder
-  gun gets Pack-a-Punched mid-tier (e.g. by the papgum mod) its kills
-  still count while the enforce loop reverts the gun itself. Every
-  player kill also prints one `GG death:` line to the host console
+- Kill credit (v4+): kills are matched by **base weapon name**, so if
+  your ladder gun gets Pack-a-Punched mid-tier (e.g. by the papgum mod)
+  its kills still count while the enforce loop reverts the gun itself.
+  Every player kill also prints one `GG death:` line to the host console
   (weapon seen, mod, tier weapon, condition) — if a tier ever sticks at
-  0 again, that line shows exactly which value didn't match.
+  0 again, that line shows exactly which value didn't match. (v3 briefly
+  captured damage info via an actor-damage callback instead of reading
+  the corpse fields; removed in v5 — a wrong `#using` path for it
+  crashed boiii's script linker at map load, and the solo playtest
+  proved the corpse fields work fine.)
 
 ## Files
 

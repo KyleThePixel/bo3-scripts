@@ -16,7 +16,6 @@
 //     your ladder weapon gets taken away within ~2 seconds.
 // ============================================================
 
-#using scripts\shared\callback_shared;
 #using scripts\zm\_zm;
 #using scripts\zm\_zm_spawner;
 #using scripts\zm\_zm_utility;
@@ -121,13 +120,6 @@ function gg_register_hooks()
         wait 0.5;
     zm::register_player_damage_callback( &gungame::gg_on_player_damaged );
     println( "GUNGAME: player damage hook registered" );
-
-    // Capture each zombie's last-hit damage info while it is
-    // guaranteed available. The death callback later prefers this
-    // stash over the corpse fields (self.damagemod etc.), which
-    // are not populated on every build.
-    callback::on_actor_damage( &gungame::gg_on_zombie_damage );
-    println( "GUNGAME: actor damage capture registered" );
 }
 
 function gg_watch_connections()
@@ -164,33 +156,14 @@ function gg_player_setup()
 
 // ---------------- kill credit ----------------
 
-// Runs on EVERY actor damage event (callback::on_actor_damage).
-// Stashes the hit's damage info on the zombie itself, while the
-// engine params are guaranteed present. The death callback below
-// prefers this stash: reading self.damagemod / self.damageweapon
-// off the corpse works in stock BO3, but a co-op playtest on
-// boiii (2026-10-21) got stuck at 0/2 on a plain-kills tier,
-// which is what empty corpse fields would look like.
-// self = the actor taking damage.
-function gg_on_zombie_damage( params )
-{
-    if ( !isDefined( params ) )
-        return;
-
-    if ( !isDefined( params.eAttacker ) || !isPlayer( params.eAttacker ) )
-        return;
-
-    self.gg_last_attacker = params.eAttacker;
-
-    if ( isDefined( params.sMeansOfDeath ) )
-        self.gg_last_mod = params.sMeansOfDeath;
-
-    if ( isDefined( params.weapon ) )
-        self.gg_last_weapon = params.weapon;
-
-    if ( isDefined( params.sHitLoc ) )
-        self.gg_last_loc = params.sHitLoc;
-}
+// Kill info is read off the dead zombie (self.damagemod,
+// self.damageweapon, self.damagelocation). Verified working on
+// boiii by the solo playtest (2026-10-21): tiers 1-2 cleared by
+// kills. An earlier build stashed the same info from a damage
+// callback instead - removed: it needed a #using whose path was
+// wrong (callback_shared vs the real callbacks_shared.gsc) and
+// boiii's linker hard-crashed the map load on it. The fields
+// work; don't re-add the stash.
 
 // self = the dead zombie. attacker = killing player (may be undefined).
 
@@ -205,13 +178,8 @@ function gg_on_zombie_death( attacker )
 
     tier = level.gg_ladder[ attacker.gg_tier ];
 
-    // Prefer the hit-time stash; fall back to the corpse fields.
     mod = self.damagemod;
     wobj = self.damageweapon;
-    if ( isDefined( self.gg_last_mod ) )
-        mod = self.gg_last_mod;
-    if ( isDefined( self.gg_last_weapon ) )
-        wobj = self.gg_last_weapon;
 
     wname = "";
     if ( isDefined( wobj ) )
@@ -278,24 +246,10 @@ function gg_on_zombie_death( attacker )
 // zombie = the dead zombie entity
 function gg_is_headshot( zombie )
 {
-    mod = zombie.damagemod;
-    if ( isDefined( zombie.gg_last_mod ) )
-        mod = zombie.gg_last_mod;
-
-    if ( mod == "MOD_HEAD_SHOT" )
+    if ( zombie.damagemod == "MOD_HEAD_SHOT" )
         return true;
-
-    weap = zombie.damageweapon;
-    if ( isDefined( zombie.gg_last_weapon ) )
-        weap = zombie.gg_last_weapon;
-
-    loc = zombie.damagelocation;
-    if ( isDefined( zombie.gg_last_loc ) )
-        loc = zombie.gg_last_loc;
-
-    if ( isDefined( weap ) && isDefined( loc ) )
-        return zm_utility::is_headshot( weap, loc, mod );
-
+    if ( isDefined( zombie.damageweapon ) && isDefined( zombie.damagelocation ) )
+        return zm_utility::is_headshot( zombie.damageweapon, zombie.damagelocation, zombie.damagemod );
     return false;
 }
 
