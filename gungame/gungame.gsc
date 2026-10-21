@@ -1,9 +1,9 @@
 // ============================================================
 //  GUNGAME v1 - BO3 Zombies co-op gun game (conditions ladder)
 // ------------------------------------------------------------
-//  Host-only script. Compile with t7-compiler and inject while
-//  sitting in a zombies pre-game lobby, then start the match.
-//  Works on all stock maps. 2-4 players (solo works too).
+//  Host-only script for the ezz boiii client: drop this file
+//  into boiii\custom_scripts (boiii compiles and loads it at
+//  startup). Works on all stock maps. 2-4 players (solo works too).
 //
 //  How it plays:
 //   - Every player climbs their own 20-weapon ladder.
@@ -25,7 +25,10 @@
 
 // ---------------- entry ----------------
 
-function main()
+// NOTE: boiii's custom_scripts loader runs a script's autoexec
+// functions when it loads the file - it never calls main().
+// This MUST stay an autoexec or the mod silently does nothing.
+function autoexec main()
 {
     // re-inject safe: don't double-register
     if ( isDefined( level.gg_enabled ) && level.gg_enabled )

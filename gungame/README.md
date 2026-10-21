@@ -41,30 +41,21 @@ Rules:
   points on them. (PaP'ing your ladder gun gets reverted too.)
 - First knife kill wins: banner, then unlimited-ammo victory lap for everyone.
 
-## Install (t7-compiler — recommended)
+## Install (ezz boiii — custom_scripts)
 
-1. Get t7-compiler (shiversoftdev's T7/BO3 GSC compiler + injector) from its
-   GitHub releases page: https://github.com/shiversoftdev/t7-compiler
-   (grab the installer under Releases).
-2. Launch Black Ops 3 (BOIII launcher is fine) and sit in a **zombies
-   pre-game lobby** — don't start the match yet.
-3. In t7-compiler, compile `gungame.gsc` (if your compiler variant wants the
-   entry file named `main.gsc`, just rename it — the `main()` function inside
-   is what matters).
-4. Inject the compiled script, then start the match. You should see
-   "GUN GAME loaded" in the killfeed area.
+Boiii compiles and loads custom scripts itself — no injector needed.
+
+1. Drop the **source** `gungame.gsc` into `custom_scripts`, in either
+   location: `<game folder>\boiii\custom_scripts\` or
+   `%LOCALAPPDATA%\boiii\data\custom_scripts\`. Top level is fine.
+2. Start (or restart) boiii and start a match. "GUN GAME loaded" prints
+   when it's in.
+
+Important: the script's entry is an **autoexec** function — that's what
+boiii's loader runs for custom scripts (it never calls `main()`).
 
 Co-op: host a private lobby, have friends join, then start. They don't need
 the script — everything runs host-side. Test in a private match first.
-
-## Install (BOIII launcher scripts folder — experimental)
-
-Some community clients auto-load loose `.gsc` files from a scripts folder
-(Plutonium uses `%localappdata%\Plutonium\storage\t6\scripts\zm\`). If the
-BOIII launcher has an equivalent folder, try dropping `gungame.gsc` in its
-`scripts\zm\` equivalent and launching a match. **Unverified** — if it
-doesn't pick it up, use the t7-compiler method above and tell me what the
-launcher's folder layout looks like.
 
 ## Tweaking
 
@@ -84,9 +75,9 @@ It's one file. Open `gungame.gsc` and edit `gg_build_ladder()`:
 - Trap / nuke kills with no attacker don't credit anyone.
 - The Bowie Knife tier uses a raw `giveWeapon`. If the knife doesn't equip
   properly on your build, tell me and I'll switch the finale to stock-knife.
-- I couldn't compile-check this in my environment — t7-compiler's compile
-  step is the syntax check. If it throws an error, send me the exact message
-  and line number.
+- Compile-checked with gsc-tool (T7) and round-trip decompiled — syntax is
+  verified; in-game behavior still needs your playtest. If boiii's console
+  shows a script error, send me the exact message and line number.
 
 ## Files
 

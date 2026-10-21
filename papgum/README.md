@@ -40,8 +40,9 @@ injector needed.
   variant, default attachment rules for the map).
 - **Alt weapons** (underbarrel launchers etc.): the parent gun is upgraded,
   same as stock gums handle it.
-- The patch re-applies itself automatically on every new map in the session —
-  inject once per lobby session.
+- The patch re-applies itself automatically on every new map in the session.
+- The script's entry is an **autoexec** function — that's what boiii's
+  custom_scripts loader runs (it never calls `main()`).
 
 ## Built from the stock scripts (verified, not guessed)
 
@@ -62,11 +63,11 @@ Same honesty rules as the gun game: this was written against the real script
 sources and is now **compiled and round-trip verified**, but it has not been
 run in-game yet.
 
-1. **In-game load** — boiii hasn't loaded this exact file yet; if your usual
-   flow is t7-compiler, the included source compiles there too.
+1. **In-game load** — the autoexec entry fix (2026-10-21) came from reading
+   boiii's own loader source; the fixed file still needs its first in-game run.
 2. **Patch timing** — the watcher re-applies the override every 0.25s, so even
    if boiii rebuilds the bgb table per map it should stick; confirm by popping
-   Bullet Boost in a second consecutive match without re-injecting.
+   Bullet Boost in a second consecutive match.
 3. **In-place swap feel** — `TakeWeapon` + `weapon_give` is the standard mod
    pattern; watch for a brief fists moment or wrong-slot weirdness with
    dual-wield guns and Mule Kick's third weapon.
@@ -76,9 +77,9 @@ run in-game yet.
 
 ## Playtest checklist
 
-- [ ] Compiled file loads in boiii without a script error
+- [ ] "PAP GUM loaded" prints when a match starts (autoexec entry works)
 - [ ] Pop with a base gun → comes back Pack-a-Punched, full ammo, AAT icon shows
 - [ ] Pop again with the same (now PaP'd) gun → AAT changes to a different one
 - [ ] Pop attempt while downed / holding equipment → gum NOT consumed
 - [ ] Works for a non-host player in co-op
-- [ ] Still works in a second match without re-injecting
+- [ ] Still works in a second match in the same session
