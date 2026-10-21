@@ -20,10 +20,8 @@ injector needed.
 1. Drop the **source** `papgum.gsc` (in `source/`) into **`custom_scripts`**
    — either `<game folder>\boiii\custom_scripts\` or
    `%LOCALAPPDATA%\boiii\data\custom_scripts\`. Top level of that folder
-   is fine. Host the lobby as usual.
-   (A pre-compiled copy is in `compiled/` — gsc-tool 1.6.1, verified by
-   decompiling it back; the round-trip matches the source
-   function-for-function. You don't need it for the custom_scripts route.)
+   is fine. Host the lobby as usual. Boiii compiles the source itself —
+   no pre-compiled copy is needed or included.
 2. Start the match. "PAP GUM loaded" prints when it's in.
 3. Buy/equip **Bullet Boost** as usual and pop it with the gun you want
    upgraded in your hands.
@@ -67,7 +65,8 @@ injector needed.
 ## Unverified — needs your playtest
 
 Same honesty rules as the gun game: this was written against the real script
-sources and is now **compiled and round-trip verified**, but it has not been
+sources and is **compile-checked with gsc-tool** (the strict T7 parser —
+boiii's own is more lenient), but the v4 deferred-swap build has not been
 run in-game yet.
 
 1. **In-game load** — the autoexec entry fix (2026-10-21) came from reading

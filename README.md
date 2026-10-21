@@ -27,8 +27,8 @@ location:
 - `<game folder>\boiii\custom_scripts\`
 - `%LOCALAPPDATA%\boiii\data\custom_scripts\`
 
-Top level of that folder is fine. Pre-compiled copies (gsc-tool, T7/PC)
-are included under each script's `compiled/` folder for other loaders.
+Top level of that folder is fine. Source only — boiii compiles the
+`.gsc` itself, so no pre-compiled copies are kept here.
 
 ## Co-op
 

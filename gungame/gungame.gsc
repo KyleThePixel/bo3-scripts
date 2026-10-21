@@ -207,18 +207,34 @@ function gg_on_zombie_death( attacker )
 
     // Prefer the hit-time stash; fall back to the corpse fields.
     mod = self.damagemod;
-    wname = "";
-    if ( isDefined( self.damageweapon ) )
-        wname = self.damageweapon.name;
+    wobj = self.damageweapon;
     if ( isDefined( self.gg_last_mod ) )
         mod = self.gg_last_mod;
     if ( isDefined( self.gg_last_weapon ) )
-        wname = self.gg_last_weapon.name;
+        wobj = self.gg_last_weapon;
+
+    wname = "";
+    if ( isDefined( wobj ) )
+        wname = wobj.name;
+    wraw = wname;
+
+    // Match by BASE weapon name: if the ladder gun got Pack-a-
+    // Punched mid-tier (e.g. by the papgum mod), its kills arrive
+    // as "<name>_upgraded" and an exact match would stall the
+    // tier at 0 forever (solo playtest, 2026-10-21: RK5 tier).
+    // The enforce loop still reverts the gun itself within ~2s;
+    // this just makes credit immune to the swap window.
+    if ( isDefined( wobj ) && zm_weapons::is_weapon_upgraded( wobj ) )
+    {
+        base = zm_weapons::get_base_weapon( wobj );
+        if ( isDefined( base ) )
+            wname = base.name;
+    }
 
     // Playtest diagnostic: one console line per player kill, so a
     // stuck tier shows exactly which value failed to match.
     smod = isDefined( mod ) ? mod : "undef";
-    println( "GG death: wname=" + wname + " mod=" + smod + " tier=" + tier.weapon + " cond=" + tier.cond );
+    println( "GG death: wname=" + wname + " raw=" + wraw + " mod=" + smod + " tier=" + tier.weapon + " cond=" + tier.cond );
 
     if ( tier.cond == "knife" )
     {
